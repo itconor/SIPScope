@@ -2,10 +2,9 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────
-# SIP Server Installer
+# SIPScope Installer
 # Run on a fresh Ubuntu/Debian VPS:
-#   curl -sSL https://your-repo/install.sh | bash
-#   or: bash install.sh
+#   curl -sSL https://raw.githubusercontent.com/itconor/SIPScope/main/install.sh | sudo bash
 # ─────────────────────────────────────────────────────────────
 
 RED='\033[0;31m'
@@ -16,11 +15,16 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 INSTALL_DIR="/opt/sipserver"
+REPO_URL="https://github.com/itconor/SIPScope.git"
 
 log()  { echo -e "${GREEN}[+]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 ask()  { echo -en "${CYAN}[?]${NC} $1"; }
+
+# Read from /dev/tty so prompts work when piped via curl
+prompt()     { read -r "$1" < /dev/tty; }
+prompt_s()   { read -rs "$1" < /dev/tty; echo; }
 
 # ─────────────────────────────────────────────────────────────
 # Pre-flight checks
@@ -33,7 +37,7 @@ fi
 log "SIPScope Installer"
 echo ""
 
-# ────────────────────��────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 # Gather configuration
 # ─────────────────────────────────────────────────────────────
 
@@ -41,46 +45,44 @@ echo ""
 DETECTED_IP=$(curl -4 -s --max-time 5 https://ifconfig.me || curl -4 -s --max-time 5 https://api.ipify.org || echo "")
 
 ask "Public IP address [${DETECTED_IP}]: "
-read -r PUBLIC_IP
+prompt PUBLIC_IP
 PUBLIC_IP="${PUBLIC_IP:-$DETECTED_IP}"
 [[ -z "$PUBLIC_IP" ]] && err "Could not detect public IP. Please provide one."
 
 ask "SIP domain (e.g. sip.yourdomain.com): "
-read -r SIP_DOMAIN
+prompt SIP_DOMAIN
 [[ -z "$SIP_DOMAIN" ]] && err "Domain is required for SSL certificates."
 
 ask "Admin web UI username [admin]: "
-read -r ADMIN_USER
+prompt ADMIN_USER
 ADMIN_USER="${ADMIN_USER:-admin}"
 
 ask "Admin web UI password: "
-read -rs ADMIN_PASS
-echo ""
+prompt_s ADMIN_PASS
 [[ -z "$ADMIN_PASS" ]] && err "Admin password is required."
 
 ask "Admin email (for Let's Encrypt notifications): "
-read -r ADMIN_EMAIL
+prompt ADMIN_EMAIL
 [[ -z "$ADMIN_EMAIL" ]] && err "Email is required for Let's Encrypt."
 
 echo ""
 ask "Set up SIP accounts now? (y/n) [y]: "
-read -r SETUP_ACCOUNTS
+prompt SETUP_ACCOUNTS
 SETUP_ACCOUNTS="${SETUP_ACCOUNTS:-y}"
 
 SIP_ACCOUNTS=()
 if [[ "$SETUP_ACCOUNTS" =~ ^[Yy] ]]; then
   while true; do
     ask "SIP account username (blank to finish): "
-    read -r SIP_USER
+    prompt SIP_USER
     [[ -z "$SIP_USER" ]] && break
 
     ask "SIP account password for '${SIP_USER}': "
-    read -rs SIP_PASS
-    echo ""
+    prompt_s SIP_PASS
     [[ -z "$SIP_PASS" ]] && { warn "Skipping — password required."; continue; }
 
     ask "Display name for '${SIP_USER}' (optional): "
-    read -r SIP_DISPLAY
+    prompt SIP_DISPLAY
 
     SIP_ACCOUNTS+=("${SIP_USER}:${SIP_PASS}:${SIP_DISPLAY}")
   done
@@ -99,7 +101,7 @@ echo -e "  SIP accounts: ${CYAN}${#SIP_ACCOUNTS[@]}${NC}"
 echo -e "${BOLD}─────────────────────────────${NC}"
 echo ""
 ask "Proceed with installation? (y/n) [y]: "
-read -r CONFIRM
+prompt CONFIRM
 [[ ! "$CONFIRM" =~ ^[Yy]?$ ]] && { echo "Aborted."; exit 0; }
 
 # ─────────────────────────────────────────────────────────────
@@ -186,17 +188,18 @@ log "SSL certificate obtained."
 # ─────────────────────────────────────────────────────────────
 
 log "Setting up application in ${INSTALL_DIR}..."
-mkdir -p "${INSTALL_DIR}"
 
-# Copy project files (if running from the repo directory)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "${SCRIPT_DIR}/package.json" ]]; then
-  log "Copying project files..."
-  cp -r "${SCRIPT_DIR}"/{package.json,package-lock.json,tsconfig.json,src,web,scripts,Dockerfile,docker-compose.yml,web-ui} "${INSTALL_DIR}/" 2>/dev/null || true
-  mkdir -p "${INSTALL_DIR}/config" "${INSTALL_DIR}/certs"
+# Clone the repo from GitHub
+if [[ -d "${INSTALL_DIR}/.git" ]]; then
+  log "Updating existing installation..."
+  cd "${INSTALL_DIR}"
+  git pull --ff-only origin main 2>/dev/null || true
 else
-  err "Run this script from the sipserver project directory."
+  rm -rf "${INSTALL_DIR}"
+  git clone "${REPO_URL}" "${INSTALL_DIR}"
 fi
+
+mkdir -p "${INSTALL_DIR}/config" "${INSTALL_DIR}/certs"
 
 # ─────────────────────────────────────────────────────────────
 # Configure SSL certs
@@ -294,7 +297,7 @@ CRONEOF
 log "Creating systemd service..."
 cat > /etc/systemd/system/sipserver.service << SVCEOF
 [Unit]
-Description=SIP Server (Docker Compose)
+Description=SIPScope (Docker Compose)
 Requires=docker.service
 After=docker.service
 

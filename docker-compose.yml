@@ -6,6 +6,7 @@ services:
     volumes:
       - ./config:/app/config
       - ./certs:/app/certs
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - rtpengine
     restart: unless-stopped

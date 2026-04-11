@@ -206,9 +206,11 @@ mkdir -p "${INSTALL_DIR}/config" "${INSTALL_DIR}/certs"
 # Configure SSL certs
 # ─────────────────────────────────────────────────────────────
 
-log "Linking SSL certificates..."
-ln -sf "${CERT_PATH}/fullchain.pem" "${INSTALL_DIR}/certs/server.crt"
-ln -sf "${CERT_PATH}/privkey.pem" "${INSTALL_DIR}/certs/server.key"
+log "Copying SSL certificates..."
+cp -L "${CERT_PATH}/fullchain.pem" "${INSTALL_DIR}/certs/server.crt"
+cp -L "${CERT_PATH}/privkey.pem" "${INSTALL_DIR}/certs/server.key"
+chmod 644 "${INSTALL_DIR}/certs/server.crt"
+chmod 600 "${INSTALL_DIR}/certs/server.key"
 
 # ─────────────────────────────────────────────────────────────
 # Write configuration
@@ -287,9 +289,9 @@ docker compose up -d
 # ─────────────────────────────────────────────────────────────
 
 log "Setting up SSL auto-renewal..."
-cat > /etc/cron.d/sipserver-certbot << 'CRONEOF'
-# Renew SSL certs twice daily, restart SIP server on renewal
-0 3,15 * * * root certbot renew --quiet --deploy-hook "cd /opt/sipserver && docker compose restart sipserver"
+cat > /etc/cron.d/sipserver-certbot << CRONEOF
+# Renew SSL certs twice daily, copy new certs and restart on renewal
+0 3,15 * * * root certbot renew --quiet --deploy-hook "cp -L /etc/letsencrypt/live/${SIP_DOMAIN}/fullchain.pem ${INSTALL_DIR}/certs/server.crt && cp -L /etc/letsencrypt/live/${SIP_DOMAIN}/privkey.pem ${INSTALL_DIR}/certs/server.key && cd ${INSTALL_DIR} && docker compose restart sipserver"
 CRONEOF
 
 # ─────────────────────────────────────────────────────────────

@@ -21,4 +21,5 @@ services:
       --port-max=30000
       --log-level=5
       --no-fallback
+      --listen-http=0
     restart: unless-stopped

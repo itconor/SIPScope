@@ -1,4 +1,4 @@
-import * as sip from './sip-patched';
+const sip = require('./sip-patched');
 import { loadServerConfig } from './config';
 import { getRegistration, findRegistrationByUsername } from './location-service';
 import * as rtpengine from './rtpengine';

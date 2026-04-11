@@ -1,4 +1,5 @@
-import * as sip from './sip-patched';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const sip = require('./sip-patched');
 import fs from 'fs';
 import path from 'path';
 import { loadServerConfig, loadAccounts, watchAccounts } from './config';

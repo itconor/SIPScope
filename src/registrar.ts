@@ -1,4 +1,4 @@
-import * as sip from './sip-patched';
+const sip = require('./sip-patched');
 import { loadServerConfig } from './config';
 import { challengeRequest, authenticateRequest } from './auth';
 import { addRegistration, removeRegistration } from './location-service';

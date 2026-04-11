@@ -44,7 +44,7 @@ function start(): void {
   };
 
   // Add TLS if certs exist
-  const certsDir = path.resolve(__dirname, '..', 'certs');
+  const certsDir = path.resolve(__dirname, '..', '..', 'certs');
   const certPath = path.join(certsDir, 'server.crt');
   const keyPath = path.join(certsDir, 'server.key');
 

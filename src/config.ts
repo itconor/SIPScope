@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import type { ServerConfig, SipAccount } from './types';
 
-const CONFIG_DIR = path.resolve(__dirname, '..', 'config');
+const CONFIG_DIR = path.resolve(__dirname, '..', '..', 'config');
 
 let serverConfig: ServerConfig | null = null;
 let accountsCache: Map<string, SipAccount> = new Map();

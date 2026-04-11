@@ -150,6 +150,7 @@ ufw allow 22/tcp > /dev/null          # SSH
 ufw allow 5060/tcp > /dev/null        # SIP TCP
 ufw allow 5060/udp > /dev/null        # SIP UDP
 ufw allow 5061/tcp > /dev/null        # SIP TLS
+ufw allow 8089/tcp > /dev/null        # SIP WebSocket (WSS)
 ufw allow 8080/tcp > /dev/null        # Web admin
 ufw allow 80/tcp > /dev/null          # HTTP (certbot)
 ufw allow 443/tcp > /dev/null         # HTTPS (certbot)
@@ -220,7 +221,8 @@ cat > "${INSTALL_DIR}/config/server.json" << SERVEREOF
   "publicIp": "${PUBLIC_IP}",
   "sip": {
     "port": 5060,
-    "tlsPort": 5061
+    "tlsPort": 5061,
+    "wsPort": 8089
   },
   "rtpengine": {
     "host": "127.0.0.1",

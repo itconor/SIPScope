@@ -3,7 +3,8 @@
   "publicIp": "0.0.0.0",
   "sip": {
     "port": 5060,
-    "tlsPort": 5061
+    "tlsPort": 5061,
+    "wsPort": 8089
   },
   "rtpengine": {
     "host": "127.0.0.1",

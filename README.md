@@ -89,6 +89,7 @@ Open these ports on your server:
 |------|----------|---------|
 | 5060 | UDP/TCP | SIP signaling |
 | 5061 | TCP | SIP over TLS |
+| 8089 | TCP | SIP over WebSocket (WSS) |
 | 8080 | TCP | Web admin UI |
 | 20000-30000 | UDP | RTP media |
 
@@ -100,7 +101,8 @@ Point your broadcast equipment to SIPScope:
 |---------|-------|
 | SIP Server | `your-domain.com` |
 | Port | `5060` (or `5061` for TLS) |
-| Transport | UDP or TLS |
+| WebSocket URL | `wss://your-domain.com:8089` |
+| Transport | UDP, TLS, or WebSocket |
 | Username | *(account you created)* |
 | Password | *(account password)* |
 | Realm | `your-domain.com` |

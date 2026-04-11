@@ -61,6 +61,7 @@ export interface ServerConfig {
   sip: {
     port: number;
     tlsPort: number;
+    wsPort: number;
   };
   rtpengine: {
     host: string;

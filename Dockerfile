@@ -23,6 +23,6 @@ COPY --from=server-build /app/dist/ ./dist/
 COPY --from=web-build /app/web-ui/dist/ ./dist/web/public/
 COPY config/ ./config/
 
-EXPOSE 5060/udp 5060/tcp 5061/tcp 8080/tcp
+EXPOSE 5060/udp 5060/tcp 5061/tcp 8089/tcp 8080/tcp
 
 CMD ["node", "dist/src/index.js"]

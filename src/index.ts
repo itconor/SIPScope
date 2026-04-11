@@ -59,6 +59,12 @@ function start(): void {
     logger.warn('No TLS certificates found in certs/ — running without TLS');
   }
 
+  // Add WebSocket port
+  if (config.sip.wsPort) {
+    sipOptions.ws_port = config.sip.wsPort;
+    logger.info({ wsPort: config.sip.wsPort }, 'WebSocket SIP enabled');
+  }
+
   // Start SIP stack
   sip.start(sipOptions, (request: any, remote: any) => {
     const method = request.method;

@@ -13,7 +13,7 @@ COPY tsconfig.json ./
 COPY src/ ./src/
 COPY web/ ./web/
 COPY scripts/ ./scripts/
-RUN npx tsc
+RUN npx tsc && cp src/sip-patched.js dist/src/sip-patched.js
 
 FROM node:20-alpine
 WORKDIR /app

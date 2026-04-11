@@ -680,14 +680,17 @@ function makeWsTransport(options, callback) {
     flows[flowid] = ws;
 
     ws.on('close', function() { console.log('[WS] Connection closed - flowid:', flowid); delete flows[flowid]; });
-    ws.on('message', function(data) {
-      console.log('[WS] Message received from', remote.address + ':' + remote.port, '- bytes:', data.length);
-      var msg = parseMessage(data);
+    ws.on('message', function(data, isBinary) {
+      // Ensure data is a string — ws v8+ delivers Buffer by default
+      var str = typeof data === 'string' ? data : data.toString('utf8');
+      console.log('[WS] Message received from', remote.address + ':' + remote.port, '- bytes:', str.length, 'type:', typeof data, 'isBinary:', isBinary);
+      console.log('[WS] First 100 chars:', JSON.stringify(str.substring(0, 100)));
+      var msg = parseMessage(str);
       if(msg) {
         console.log('[WS] Parsed SIP message:', msg.method || ('Response ' + msg.status));
         callback(msg, {protocol: 'WS', address: remote.address, port: remote.port, local: local});
       } else {
-        console.log('[WS] Failed to parse SIP message');
+        console.log('[WS] Failed to parse SIP message - raw start:', JSON.stringify(str.substring(0, 200)));
       }
     });
   }
@@ -1392,8 +1395,11 @@ exports.create = function(options, callback) {
   return {
     send: function(m, callback) {
       if(m.method === undefined) {
+        var tid = makeTransactionId(m);
         var t = transaction.getServer(m);
-        t && t.send && t.send(m);
+        console.log('[SIP] send response status=' + m.status + ' txId=' + tid + ' txFound=' + !!t + ' hasSend=' + !!(t && t.send));
+        if(t && t.send) t.send(m);
+        else console.log('[SIP] WARNING: no server transaction for response');
       }
       else {
         var hop = parseUri(m.uri);

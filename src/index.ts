@@ -101,8 +101,8 @@ function start(): void {
           sip.send(sip.makeResponse(request, 405, 'Method Not Allowed'));
           break;
       }
-    } catch (err) {
-      logger.error({ err, method }, 'Error handling SIP request');
+    } catch (err: any) {
+      logger.error({ err: err?.message || err, stack: err?.stack, method }, 'Error handling SIP request');
       try {
         sip.send(sip.makeResponse(request, 500, 'Server Internal Error'));
       } catch (_) {

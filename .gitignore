@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+certs/*.key
+certs/*.crt
+certs/*.pem
+web/public/
+web-ui/dist/
+web-ui/node_modules/

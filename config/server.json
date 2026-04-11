@@ -1,0 +1,21 @@
+{
+  "domain": "sip.example.com",
+  "publicIp": "0.0.0.0",
+  "sip": {
+    "port": 5060,
+    "tlsPort": 5061
+  },
+  "rtpengine": {
+    "host": "127.0.0.1",
+    "port": 22222
+  },
+  "web": {
+    "port": 8080,
+    "adminUser": "admin",
+    "adminPassword": "changeme",
+    "sessionSecret": "change-this-to-a-random-string"
+  },
+  "registrationExpiry": 60,
+  "realm": "sip.example.com",
+  "logLevel": "info"
+}

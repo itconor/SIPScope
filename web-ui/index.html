@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SIPScope</title>
+    <link rel="icon" type="image/png" href="/sipscope_icon.png" />
+    <style>
+      :root {
+        --bg: #07142b;
+        --sur: #0d2346;
+        --bor: #17345f;
+        --acc: #17a8ff;
+        --ok: #22c55e;
+        --wn: #f59e0b;
+        --al: #ef4444;
+        --tx: #eef5ff;
+        --mu: #8aa4c8;
+      }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: system-ui, sans-serif;
+        background: radial-gradient(circle at top, #12376f 0%, var(--bg) 38%, #05101f 100%);
+        color: var(--tx);
+        font-size: 14px;
+        line-height: 1.45;
+        position: relative;
+        min-height: 100vh;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        right: 28px;
+        bottom: 22px;
+        width: 280px;
+        height: 280px;
+        background: url("/sipscope_icon.png") no-repeat center/contain;
+        opacity: 0.045;
+        pointer-events: none;
+        filter: drop-shadow(0 0 24px rgba(23, 168, 255, 0.10));
+        z-index: 0;
+      }
+      body > * { position: relative; z-index: 1; }
+      a { color: var(--acc); text-decoration: none; }
+      ::selection { background: rgba(23, 168, 255, 0.3); }
+      input:focus, select:focus { outline: none; border-color: var(--acc) !important; box-shadow: 0 0 0 2px rgba(23, 168, 255, 0.15); }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--bor); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--acc); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

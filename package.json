@@ -1,0 +1,30 @@
+{
+  "name": "sipserver",
+  "version": "1.0.0",
+  "description": "Self-hosted SIP server for broadcast outside broadcasts",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "manage-accounts": "ts-node scripts/manage-accounts.ts",
+    "build:web": "cd web-ui && npm run build && cp -r dist/ ../web/public/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "pino": "^10.3.1",
+    "sip": "^0.0.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/express-session": "^1.18.2",
+    "@types/node": "^25.6.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}

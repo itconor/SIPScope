@@ -1,4 +1,4 @@
-import * as sip from 'sip';
+import * as sip from './sip-patched';
 import fs from 'fs';
 import path from 'path';
 import { loadServerConfig, loadAccounts, watchAccounts } from './config';

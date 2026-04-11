@@ -1,3 +1,17 @@
+declare module './sip-patched' {
+  export function start(options: any, callback: (request: any, remote: any) => void): void;
+  export function stop(): void;
+  export function send(message: any, callback?: (response: any, remote?: any) => void): void;
+  export function makeResponse(request: any, status: number, reason?: string): any;
+  export function parseUri(uri: string): { schema?: string; user?: string; host?: string; port?: number; params?: any };
+  export function stringifyUri(uri: any): string;
+  export function parseAOR(aor: string): any;
+  export function copyMessage(msg: any, deep?: boolean): any;
+  export function generateBranch(): string;
+  export function parse(data: string | Buffer): any;
+  export function stringify(message: any): string;
+}
+
 declare module 'sip' {
   export function start(options: any, callback: (request: any, remote: any) => void): void;
   export function stop(): void;

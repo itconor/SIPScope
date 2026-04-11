@@ -1,4 +1,4 @@
-import * as sip from 'sip';
+import * as sip from './sip-patched';
 import { loadServerConfig } from './config';
 import { challengeRequest, authenticateRequest } from './auth';
 import { addRegistration, removeRegistration } from './location-service';

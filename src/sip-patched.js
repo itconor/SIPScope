@@ -685,12 +685,22 @@ function makeWsTransport(options, callback) {
       var str = typeof data === 'string' ? data : data.toString('utf8');
       console.log('[WS] Message received from', remote.address + ':' + remote.port, '- bytes:', str.length, 'type:', typeof data, 'isBinary:', isBinary);
       console.log('[WS] First 100 chars:', JSON.stringify(str.substring(0, 100)));
+      console.log('[WS] Last 30 chars:', JSON.stringify(str.substring(str.length - 30)));
+      console.log('[WS] Has CRLFCRLF:', str.indexOf('\r\n\r\n') !== -1, 'at pos:', str.indexOf('\r\n\r\n'));
+      console.log('[WS] Has LFLF:', str.indexOf('\n\n') !== -1, 'at pos:', str.indexOf('\n\n'));
+      // Try parsing with original data, then with normalized line endings
       var msg = parseMessage(str);
+      if(!msg && str.indexOf('\r\n\r\n') === -1 && str.indexOf('\n\n') !== -1) {
+        // Client sent LF-only line endings — normalize to CRLF
+        console.log('[WS] Normalizing LF to CRLF');
+        msg = parseMessage(str.replace(/\r?\n/g, '\r\n'));
+      }
       if(msg) {
         console.log('[WS] Parsed SIP message:', msg.method || ('Response ' + msg.status));
         callback(msg, {protocol: 'WS', address: remote.address, port: remote.port, local: local});
       } else {
-        console.log('[WS] Failed to parse SIP message - raw start:', JSON.stringify(str.substring(0, 200)));
+        console.log('[WS] Failed to parse SIP message');
+        console.log('[WS] Char codes of first 20:', Array.from(str.substring(0, 20)).map(function(c){return c.charCodeAt(0)}).join(','));
       }
     });
   }

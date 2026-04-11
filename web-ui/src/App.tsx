@@ -24,7 +24,7 @@ export default function App() {
     return <Login onLogin={() => setAuthenticated(true)} />;
   }
 
-  const navBtn = (p: Page, label: string) => ({
+  const navBtn = (p: Page) => ({
     ...styles.navBtn,
     ...(page === p ? styles.navActive : {}),
   });
@@ -38,10 +38,10 @@ export default function App() {
           <span style={styles.badge}>SIP Server</span>
         </div>
         <nav style={styles.nav}>
-          <button style={navBtn('dashboard', 'Dashboard')} onClick={() => setPage('dashboard')}>
+          <button style={navBtn('dashboard')} onClick={() => setPage('dashboard')}>
             Dashboard
           </button>
-          <button style={navBtn('accounts', 'Accounts')} onClick={() => setPage('accounts')}>
+          <button style={navBtn('accounts')} onClick={() => setPage('accounts')}>
             Accounts
           </button>
           <button

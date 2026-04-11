@@ -9,7 +9,9 @@ const authSessions = new Map<string, any>();
 export function challengeRequest(request: any, response: any): any {
   const realm = config.realm;
   const ctx: any = { realm };
-  const sessionKey = `${request.headers['call-id']}-${request.headers.cseq.seq}`;
+  // Key by Call-ID only — the client's auth retry keeps the same Call-ID
+  // but increments CSeq
+  const sessionKey = request.headers['call-id'];
 
   digest.challenge(ctx, response);
   authSessions.set(sessionKey, ctx);
@@ -39,13 +41,12 @@ export function authenticateRequest(request: any): { authenticated: boolean; use
     return { authenticated: false };
   }
 
-  // Find the auth session context
-  const sessionKey = `${request.headers['call-id']}-${request.headers.cseq.seq}`;
+  // Find the auth session context by Call-ID
+  const sessionKey = request.headers['call-id'];
   const ctx = authSessions.get(sessionKey);
 
   if (!ctx) {
-    // No matching challenge session - could be a stale nonce
-    logger.warn({ username }, 'Auth attempt with no matching challenge');
+    logger.warn({ username, callId: sessionKey }, 'Auth attempt with no matching challenge');
     return { authenticated: false };
   }
 

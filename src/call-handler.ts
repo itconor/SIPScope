@@ -175,6 +175,20 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
           rtpengine.answer(callId, fromTag, toTag, answerSdp, mode)
             .then((rewrittenAnswerSdp) => {
               logger.info({ callId, sdp: rewrittenAnswerSdp }, 'Answer SDP to browser (after rtpengine)');
+
+              // For webrtc-to-sip: inject a=ice-lite before the first m= line.
+              // Without this, the browser performs full ICE and waits for incoming
+              // STUN checks from rtpengine that never arrive (rtpengine is ICE-lite
+              // and only responds to STUN — it never initiates). The browser's ICE
+              // stays in "checking", DTLS never starts, and no audio flows.
+              // a=ice-lite tells the browser the remote is ICE-lite, so the browser
+              // becomes the controlling agent and only sends (not expects) STUN checks.
+              let finalAnswerSdp = rewrittenAnswerSdp;
+              if (mode === 'webrtc-to-sip') {
+                finalAnswerSdp = rewrittenAnswerSdp.replace(/^(m=)/m, 'a=ice-lite\r\n$1');
+                logger.debug({ callId }, 'Injected a=ice-lite into answer SDP for webrtc-to-sip');
+              }
+
               // Extract callee's Contact URI from 200 OK for ACK forwarding.
               // RFC 3261 §13.2.2.4: ACK Request-URI is the Contact from 200 OK.
               const calleeContact = (response.headers.contact?.[0]?.uri
@@ -198,7 +212,7 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
               okResponse.headers.to = response.headers.to;
               okResponse.headers.contact = [{ uri: `sip:${config.domain}:${config.sip.port}` }];
               okResponse.headers['content-type'] = 'application/sdp';
-              okResponse.content = rewrittenAnswerSdp;
+              okResponse.content = finalAnswerSdp;
               sip.send(okResponse);
 
               logger.info({ callId, caller: callerUser, callee: callee.username, mode }, 'Call established');

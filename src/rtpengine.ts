@@ -38,20 +38,16 @@ export async function offer(
   let flags: Record<string, any>;
 
   if (mode === 'webrtc-to-sip') {
-    // A-leg: WebRTC (DTLS-SRTP + ICE)
-    // B-leg SDP produced for callee: plain RTP/AVP, no ICE, no DTLS.
-    // NOTE: rtpengine NG protocol uses spaces in parameter names, not hyphens.
+    // A-leg offer: plain RTP/AVP SDP sent to the SIP callee (Zoiper).
+    // Strip ICE and DTLS entirely — plain SIP clients don't speak WebRTC.
     flags = {
       'call-id':            callId,
       'from-tag':           fromTag,
       sdp,
       replace:              ['origin', 'session-connection'],
-      ICE:                  'remove',    // strip ICE from B-leg SDP
-      DTLS:                 'passive',   // rtpengine terminates DTLS toward browser
-      // 'transport protocol' (space) is the correct rtpengine NG parameter name
+      ICE:                  'remove',
       'transport protocol': 'RTP/AVP',
-      'rtcp-mux':           ['demux'],   // split rtcp-mux for non-WebRTC callee
-      SDES:                 ['off'],     // no SDES — browsers only support DTLS
+      'rtcp-mux':           ['demux'],
     };
   } else if (mode === 'webrtc-to-webrtc') {
     flags = {
@@ -96,32 +92,22 @@ export async function answer(
   let flags: Record<string, any>;
 
   if (mode === 'webrtc-to-sip') {
-    // B-leg answer is from Zoiper (plain RTP/AVP).
-    // The SDP produced by rtpengine here goes back to the WebRTC browser as
-    // the 200 OK answer.  It MUST be a full WebRTC SDP:
-    //   - transport protocol: UDP/TLS/RTP/SAVPF  (browser rejects anything else)
-    //   - DTLS fingerprint + a=setup:passive  (rtpengine waits, browser initiates)
-    //   - ICE candidates for rtpengine's relay port  (browser uses these for media)
-    //   - rtcp-mux (WebRTC requires it)
-    //   - SDES off (browsers don't support SDES, only DTLS)
-    // Without 'transport protocol', rtpengine leaves the m= line as RTP/AVP and
-    // the browser sends plain RTP.  rtpengine then tries to output SRTP but has
-    // no crypto keys → "SRTP output wanted, but no crypto suite was negotiated".
+    // B-leg answer: Zoiper's plain RTP/AVP answer arrives here.
+    // rtpengine rewrites this into a WebRTC SDP for the browser:
+    //   - transport protocol: UDP/TLS/RTP/SAVPF (browser requires this)
+    //   - ICE candidates for rtpengine's relay port
+    //   - rtcp-mux required (WebRTC mandates it)
+    // rtpengine handles the DTLS negotiation toward the browser automatically
+    // based on the transport protocol — no explicit DTLS flag needed.
     flags = {
       'call-id':            callId,
       'from-tag':           fromTag,
       'to-tag':             toTag,
       sdp,
       replace:              ['origin', 'session-connection'],
-      // ICE:'lite' makes rtpengine an ICE-lite endpoint — it responds to the
-      // browser's STUN binding requests so ICE connectivity actually completes.
-      // ICE:'force' only adds candidates to the SDP without handling STUN,
-      // so the browser's ICE stays in "checking" and DTLS never starts.
-      ICE:                  'lite',
-      DTLS:                 'passive',
+      ICE:                  'force',
       'transport protocol': 'UDP/TLS/RTP/SAVPF',
       'rtcp-mux':           ['require'],
-      SDES:                 ['off'],
     };
   } else if (mode === 'webrtc-to-webrtc') {
     flags = {

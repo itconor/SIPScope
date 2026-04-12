@@ -51,6 +51,7 @@ export async function offer(
       // 'transport protocol' (space) is the correct rtpengine NG parameter name
       'transport protocol': 'RTP/AVP',
       'rtcp-mux':           ['demux'],   // split rtcp-mux for non-WebRTC callee
+      SDES:                 ['off'],     // no SDES — browsers only support DTLS
     };
   } else if (mode === 'webrtc-to-webrtc') {
     flags = {
@@ -97,19 +98,26 @@ export async function answer(
   if (mode === 'webrtc-to-sip') {
     // B-leg answer is from Zoiper (plain RTP/AVP).
     // The SDP produced by rtpengine here goes back to the WebRTC browser as
-    // the 200 OK answer.  It must be WebRTC-compatible (DTLS fingerprint, ICE
-    // candidates for rtpengine's relay port).  Do NOT strip ICE or change the
-    // transport — rtpengine uses the context from the offer phase (where we
-    // said DTLS:passive) to automatically produce the correct WebRTC answer.
+    // the 200 OK answer.  It MUST be a full WebRTC SDP:
+    //   - transport protocol: UDP/TLS/RTP/SAVPF  (browser rejects anything else)
+    //   - DTLS fingerprint + a=setup:passive  (rtpengine waits, browser initiates)
+    //   - ICE candidates for rtpengine's relay port  (browser uses these for media)
+    //   - rtcp-mux (WebRTC requires it)
+    //   - SDES off (browsers don't support SDES, only DTLS)
+    // Without 'transport protocol', rtpengine leaves the m= line as RTP/AVP and
+    // the browser sends plain RTP.  rtpengine then tries to output SRTP but has
+    // no crypto keys → "SRTP output wanted, but no crypto suite was negotiated".
     flags = {
-      'call-id':  callId,
-      'from-tag': fromTag,
-      'to-tag':   toTag,
+      'call-id':            callId,
+      'from-tag':           fromTag,
+      'to-tag':             toTag,
       sdp,
-      replace:    ['origin', 'session-connection'],
-      DTLS:       'passive',
-      // Let rtpengine generate ICE candidates in the answer for the browser
-      ICE:        'force',
+      replace:              ['origin', 'session-connection'],
+      DTLS:                 'passive',
+      ICE:                  'force',
+      'transport protocol': 'UDP/TLS/RTP/SAVPF',
+      'rtcp-mux':           ['require'],
+      SDES:                 ['off'],
     };
   } else if (mode === 'webrtc-to-webrtc') {
     flags = {

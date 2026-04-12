@@ -16,6 +16,7 @@ services:
     network_mode: host
     command: >
       rtpengine
+      --table=-1
       --interface=${PUBLIC_IP:-0.0.0.0}
       --listen-ng=127.0.0.1:22222
       --port-min=20000

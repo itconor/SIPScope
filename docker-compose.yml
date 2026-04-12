@@ -16,11 +16,10 @@ services:
     network_mode: host
     command: >
       rtpengine
-      --interface=pub/${PUBLIC_IP:-0.0.0.0}
+      --interface=${PUBLIC_IP:-0.0.0.0}
       --listen-ng=127.0.0.1:22222
       --port-min=20000
       --port-max=30000
       --log-level=5
       --no-fallback
-      --listen-http=0
     restart: unless-stopped

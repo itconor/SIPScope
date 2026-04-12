@@ -11,7 +11,7 @@
     "port": 22222
   },
   "web": {
-    "port": 8080,
+    "port": 3000,
     "adminUser": "admin",
     "adminPassword": "changeme",
     "sessionSecret": "change-this-to-a-random-string"

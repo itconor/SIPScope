@@ -135,6 +135,7 @@ function parseBencode(str: string): any {
 }
 
 export async function offer(callId: string, fromTag: string, sdp: string): Promise<string> {
+  logger.info({ callId, fromTag, sdpLength: sdp.length }, 'Sending offer to rtpengine');
   const result = await sendCommand({
     command: 'offer',
     'call-id': callId,
@@ -142,10 +143,9 @@ export async function offer(callId: string, fromTag: string, sdp: string): Promi
     sdp,
     replace: ['origin', 'session-connection'],
     ICE: 'remove',
-    direction: ['external', 'external'],
     'rtcp-mux': ['offer'],
   });
-  logger.debug({ callId }, 'rtpengine offer processed');
+  logger.info({ callId, result: result.result, hasSdp: !!result.sdp }, 'rtpengine offer response');
   return result.sdp;
 }
 
@@ -158,7 +158,6 @@ export async function answer(callId: string, fromTag: string, toTag: string, sdp
     sdp,
     replace: ['origin', 'session-connection'],
     ICE: 'remove',
-    direction: ['external', 'external'],
     'rtcp-mux': ['offer'],
   });
   logger.debug({ callId }, 'rtpengine answer processed');

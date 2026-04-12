@@ -151,7 +151,7 @@ ufw allow 5060/tcp > /dev/null        # SIP TCP
 ufw allow 5060/udp > /dev/null        # SIP UDP
 ufw allow 5061/tcp > /dev/null        # SIP TLS
 ufw allow 8089/tcp > /dev/null        # SIP WebSocket (WSS)
-ufw allow 8080/tcp > /dev/null        # Web admin
+ufw allow 3000/tcp > /dev/null        # Web admin
 ufw allow 80/tcp > /dev/null          # HTTP (certbot)
 ufw allow 443/tcp > /dev/null         # HTTPS (certbot)
 ufw allow 20000:30000/udp > /dev/null # RTP media
@@ -231,7 +231,7 @@ cat > "${INSTALL_DIR}/config/server.json" << SERVEREOF
     "port": 22222
   },
   "web": {
-    "port": 8080,
+    "port": 3000,
     "adminUser": "${ADMIN_USER}",
     "adminPassword": "${ADMIN_PASS}",
     "sessionSecret": "${SESSION_SECRET}"
@@ -343,7 +343,7 @@ echo -e "${BOLD}${GREEN}══════════════════�
 echo -e "${BOLD}${GREEN}  SIPScope Installation Complete!${NC}"
 echo -e "${BOLD}${GREEN}════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  ${BOLD}Web Admin:${NC}    http://${PUBLIC_IP}:8080"
+echo -e "  ${BOLD}Web Admin:${NC}    http://${PUBLIC_IP}:3000"
 echo -e "  ${BOLD}SIP Server:${NC}   ${SIP_DOMAIN}:5060 (UDP/TCP)"
 echo -e "  ${BOLD}SIP TLS:${NC}      ${SIP_DOMAIN}:5061 (TCP)"
 echo ""

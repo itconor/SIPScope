@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Read(//Users/conorewings/.nvm/versions/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(brew install:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(chmod +x /Users/conorewings/Documents/sipserver/install.sh)",
+      "WebSearch",
+      "Bash(python3)",
+      "Bash(cp /Users/conorewings/Downloads/SignalScope-main-2/static/signalscope_icon.png /Users/conorewings/Documents/sipserver/web-ui/public/sipscope_icon.png)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx serve:*)",
+      "Bash(git init:*)",
+      "Bash(gh auth:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(gh repo:*)",
+      "Bash(git push:*)",
+      "Bash(node -e ':*)",
+      "Bash(rm -f /Users/conorewings/Documents/sipserver/.git/index.lock)",
+      "Bash(curl -v http://sip.signalscope.site:8080/)",
+      "Bash(curl -s http://sip.signalscope.site:8080/ -D -)",
+      "Bash(curl -s http://sip.signalscope.site:3000/ -D -)",
+      "Bash(rm -f .git/index.lock)",
+      "Bash(curl -v https://sip.signalscope.site:8089)",
+      "Bash(nc -zv sip.signalscope.site 8089 -w 3)",
+      "Bash(curl -v https://sip.signalscope.site:5061)",
+      "Bash(curl -s http://sip.signalscope.site:8080/)",
+      "Bash(curl -s http://sip.signalscope.site:8080/api/auth/check)",
+      "Bash(ls /Users/conorewings/Documents/sipserver/dist/src/sip-patched*)",
+      "Bash(ssh conor@sip.signalscope.site \"sudo sed -i 's/\\\\\"adminUser\\\\\": \\\\\"admin\\\\\"/\\\\\"adminUser\\\\\": \\\\\"conor\\\\\"/' /opt/sipserver/config/server.json && sudo sed -i 's/\\\\\"adminPassword\\\\\": \\\\\"changeme\\\\\"/\\\\\"adminPassword\\\\\": \\\\\"2776starwars1\\\\\"/' /opt/sipserver/config/server.json && cd /opt/sipserver && sudo docker compose restart sipserver\")",
+      "Bash(curl -s http://sip.signalscope.site:3000/api/auth/check)",
+      "Bash(npm ls:*)",
+      "Bash(npm info:*)"
+    ]
+  }
+}

@@ -2,8 +2,9 @@ const sip = require('./sip-patched');
 import { loadServerConfig } from './config';
 import { getRegistration, findRegistrationByUsername } from './location-service';
 import * as rtpengine from './rtpengine';
+import type { BridgeMode } from './rtpengine';
 import logger from './logger';
-import type { ActiveCall, RemoteInfo } from './types';
+import type { ActiveCall, RemoteInfo, Registration } from './types';
 
 const config = loadServerConfig();
 const activeCalls = new Map<string, ActiveCall>();
@@ -48,6 +49,43 @@ function resolveCallee(uri: any): { username: string; host: string; port: number
   };
 }
 
+/**
+ * Returns true if the SDP is from a WebRTC client.
+ * WebRTC always uses DTLS-SRTP (fingerprint) and ICE.
+ */
+function isWebRtcSdp(sdp: string): boolean {
+  return /UDP\/TLS\/RTP\/SAVPF/i.test(sdp) || /^a=fingerprint:/im.test(sdp);
+}
+
+/**
+ * Returns true if the registered client connected via WebSocket (WebRTC).
+ */
+function isWebRtcRegistration(reg: Registration): boolean {
+  const proto = (reg.receivedProtocol || '').toUpperCase();
+  return proto === 'WS' || proto === 'WSS';
+}
+
+/**
+ * Determine the appropriate rtpengine bridge mode for a call.
+ * - webrtc-to-sip:    IP Link (browser) → Zoiper / hardware phone
+ * - webrtc-to-webrtc: IP Link → IP Link (both WebRTC)
+ * - sip-to-sip:       traditional phone → traditional phone
+ */
+function detectBridgeMode(offerSdp: string, calleeUsername: string): BridgeMode {
+  const callerIsWebRtc = isWebRtcSdp(offerSdp);
+
+  const calleeReg = findRegistrationByUsername(calleeUsername)
+    || getRegistration(`${calleeUsername}@${config.domain}`);
+
+  const calleeIsWebRtc = calleeReg ? isWebRtcRegistration(calleeReg) : false;
+
+  logger.debug({ calleeUsername, callerIsWebRtc, calleeIsWebRtc }, 'Bridge mode detection');
+
+  if (callerIsWebRtc && !calleeIsWebRtc) return 'webrtc-to-sip';
+  if (callerIsWebRtc && calleeIsWebRtc)  return 'webrtc-to-webrtc';
+  return 'sip-to-sip';
+}
+
 export function handleInvite(request: any, remote: RemoteInfo): void {
   const callId = request.headers['call-id'];
   const fromTag = extractTag(request.headers.from);
@@ -78,7 +116,11 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
     return;
   }
 
-  rtpengine.offer(callId, fromTag, sdp)
+  // Detect bridge mode: WebRTC→plain-SIP, WebRTC→WebRTC, or SIP→SIP
+  const mode = detectBridgeMode(sdp, callee.username);
+  logger.info({ callId, mode, caller: callerUser, callee: callee.username }, 'Using bridge mode');
+
+  rtpengine.offer(callId, fromTag, sdp, mode)
     .then((rewrittenSdp) => {
       // Build outbound INVITE to callee
       const outboundRequest: any = {
@@ -125,7 +167,7 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
           }
 
           // Process answer SDP through rtpengine
-          rtpengine.answer(callId, fromTag, toTag, answerSdp)
+          rtpengine.answer(callId, fromTag, toTag, answerSdp, mode)
             .then((rewrittenAnswerSdp) => {
               // Store active call
               activeCalls.set(callId, {
@@ -145,7 +187,7 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
               okResponse.content = rewrittenAnswerSdp;
               sip.send(okResponse);
 
-              logger.info({ callId, caller: callerUser, callee: callee.username }, 'Call established');
+              logger.info({ callId, caller: callerUser, callee: callee.username, mode }, 'Call established');
             })
             .catch((err) => {
               logger.error({ err, callId }, 'rtpengine answer failed');
@@ -156,12 +198,12 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
 
         // Forward error responses
         if (response.status >= 300) {
+          logger.warn({ callId, status: response.status, reason: response.reason }, 'Call rejected by callee');
           const errorResponse = sip.makeResponse(request, response.status, response.reason);
           sip.send(errorResponse);
 
           // Clean up rtpengine session
           rtpengine.deleteSession(callId, fromTag).catch(() => {});
-          logger.info({ callId, status: response.status }, 'Call rejected by callee');
         }
       });
     })

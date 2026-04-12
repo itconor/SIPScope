@@ -15,9 +15,12 @@ function extractTag(header: any): string {
   return header?.params?.tag || '';
 }
 
-function resolveCallee(uri: string): { username: string; host: string; port: number } | null {
-  const parsed = sip.parseUri(uri);
-  const username = parsed.user;
+function resolveCallee(uri: any): { username: string; host: string; port: number } | null {
+  // request.uri can be a parsed object or a string depending on the SIP library
+  const parsed = typeof uri === 'string' ? sip.parseUri(uri) : uri;
+  const username = parsed?.user;
+
+  logger.debug({ uri, parsed, username }, 'Resolving callee');
 
   if (!username) return null;
 
@@ -27,7 +30,10 @@ function resolveCallee(uri: string): { username: string; host: string; port: num
     // Try by full AOR
     const aor = `${username}@${config.domain}`;
     const regByAor = getRegistration(aor);
-    if (!regByAor) return null;
+    if (!regByAor) {
+      logger.warn({ username, aor }, 'Callee not registered');
+      return null;
+    }
     return {
       username,
       host: regByAor.receivedHost,
@@ -46,7 +52,8 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
   const callId = request.headers['call-id'];
   const fromTag = extractTag(request.headers.from);
   const callerUri = request.headers.from.uri;
-  const callerUser = sip.parseUri(callerUri).user || 'unknown';
+  const callerParsed = typeof callerUri === 'string' ? sip.parseUri(callerUri) : callerUri;
+  const callerUser = callerParsed?.user || 'unknown';
 
   logger.info({ callId, from: callerUser, uri: request.uri }, 'Incoming INVITE');
 

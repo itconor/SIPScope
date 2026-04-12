@@ -39,32 +39,27 @@ export async function offer(
 
   if (mode === 'webrtc-to-sip') {
     // A-leg: WebRTC (DTLS-SRTP + ICE)
-    // B-leg SDP produced for callee: plain RTP/AVP, no ICE, no DTLS
+    // B-leg SDP produced for callee: plain RTP/AVP, no ICE, no DTLS.
+    // NOTE: rtpengine NG protocol uses spaces in parameter names, not hyphens.
     flags = {
       'call-id':            callId,
       'from-tag':           fromTag,
       sdp,
       replace:              ['origin', 'session-connection'],
-      // rtpengine terminates ICE and DTLS from the WebRTC caller
-      ICE:                  'remove',        // strip ICE candidates from B-leg SDP
-      DTLS:                 'passive',       // rtpengine handles DTLS toward caller
-      // Rewrite transport so Zoiper/hardphones see plain RTP
-      'transport-protocol': 'RTP/AVP',
-      // Zoiper doesn't support rtcp-mux — demux RTCP into separate stream
-      'rtcp-mux':           ['demux'],
-      flags:                ['trust-address', 'SIP-source-address'],
+      ICE:                  'remove',    // strip ICE from B-leg SDP
+      DTLS:                 'passive',   // rtpengine terminates DTLS toward browser
+      // 'transport protocol' (space) is the correct rtpengine NG parameter name
+      'transport protocol': 'RTP/AVP',
+      'rtcp-mux':           ['demux'],   // split rtcp-mux for non-WebRTC callee
     };
   } else if (mode === 'webrtc-to-webrtc') {
-    // Both sides are WebRTC; rtpengine relays between two DTLS-SRTP legs.
-    // ICE is handled end-to-end; we just relay the media.
     flags = {
       'call-id':  callId,
       'from-tag': fromTag,
       sdp,
       replace:    ['origin', 'session-connection'],
-      ICE:        'force',     // rtpengine participates in ICE for A-leg
+      ICE:        'force',
       DTLS:       'passive',
-      flags:      ['trust-address'],
     };
   } else {
     // Plain SIP ↔ plain SIP
@@ -78,11 +73,12 @@ export async function offer(
     };
   }
 
+  logger.debug({ callId, flags }, 'rtpengine offer flags');
   const result = await client.offer(config.rtpengine.port, config.rtpengine.host, flags);
-  logger.info({ callId, result: result.result, hasSdp: !!result.sdp, mode }, 'rtpengine offer response');
+  logger.info({ callId, result: result.result, hasSdp: !!result.sdp, mode, errorReason: result['error-reason'] }, 'rtpengine offer response');
 
   if (result.result !== 'ok') {
-    throw new Error(result['error-reason'] || `rtpengine offer failed: ${result.result}`);
+    throw new Error(`rtpengine offer failed [${result.result}]: ${result['error-reason'] || '(no reason given)'}`);
   }
   return result.sdp;
 }
@@ -99,19 +95,16 @@ export async function answer(
   let flags: Record<string, any>;
 
   if (mode === 'webrtc-to-sip') {
-    // B-leg answer comes from Zoiper (plain RTP/AVP).
-    // rtpengine rewrites it to something the WebRTC caller can use.
-    // The caller already negotiated DTLS/ICE in the offer phase;
-    // rtpengine just needs to confirm its own addresses.
+    // B-leg answer is from Zoiper (plain RTP/AVP).
+    // rtpengine bridges it back to the WebRTC browser.
     flags = {
       'call-id':  callId,
       'from-tag': fromTag,
       'to-tag':   toTag,
       sdp,
       replace:    ['origin', 'session-connection'],
-      ICE:        'remove',   // no ICE needed in the answer back to the caller
+      ICE:        'remove',
       DTLS:       'passive',
-      flags:      ['trust-address'],
     };
   } else if (mode === 'webrtc-to-webrtc') {
     flags = {
@@ -122,7 +115,6 @@ export async function answer(
       replace:    ['origin', 'session-connection'],
       ICE:        'force',
       DTLS:       'passive',
-      flags:      ['trust-address'],
     };
   } else {
     flags = {
@@ -137,10 +129,10 @@ export async function answer(
   }
 
   const result = await client.answer(config.rtpengine.port, config.rtpengine.host, flags);
-  logger.debug({ callId, mode }, 'rtpengine answer processed');
+  logger.info({ callId, result: result.result, mode, errorReason: result['error-reason'] }, 'rtpengine answer response');
 
   if (result.result !== 'ok') {
-    throw new Error(result['error-reason'] || `rtpengine answer failed: ${result.result}`);
+    throw new Error(`rtpengine answer failed [${result.result}]: ${result['error-reason'] || '(no reason given)'}`);
   }
   return result.sdp;
 }

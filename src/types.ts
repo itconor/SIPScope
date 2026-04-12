@@ -53,6 +53,12 @@ export interface ActiveCall {
   callerTag: string;
   calleeTag: string;
   rtpengineCallId?: string;
+  /** Contact URI from callee's 200 OK — used as Request-URI when forwarding ACK */
+  calleeContactUri?: string;
+  /** CSeq sequence number from the outbound INVITE — must be echoed in B-leg ACK */
+  outboundCseqSeq?: number;
+  /** From header from the original INVITE (echoed verbatim in B-leg ACK) */
+  callerFromHeader?: any;
 }
 
 export interface ServerConfig {

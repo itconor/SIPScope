@@ -169,6 +169,11 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
           // Process answer SDP through rtpengine
           rtpengine.answer(callId, fromTag, toTag, answerSdp, mode)
             .then((rewrittenAnswerSdp) => {
+              // Extract callee's Contact URI from 200 OK for ACK forwarding.
+              // RFC 3261 §13.2.2.4: ACK Request-URI is the Contact from 200 OK.
+              const calleeContact = (response.headers.contact?.[0]?.uri
+                || `sip:${callee.username}@${callee.host}:${callee.port}`);
+
               // Store active call
               activeCalls.set(callId, {
                 callId,
@@ -177,6 +182,9 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
                 startedAt: Date.now(),
                 callerTag: fromTag,
                 calleeTag: toTag,
+                calleeContactUri:  calleeContact,
+                outboundCseqSeq:   request.headers.cseq.seq,
+                callerFromHeader:  request.headers.from,
               });
 
               // Forward 200 OK to caller with rewritten SDP
@@ -249,8 +257,38 @@ export function handleCancel(request: any, remote: RemoteInfo): void {
   logger.info({ callId }, 'Call cancelled');
 }
 
-export function handleAck(_request: any, _remote: RemoteInfo): void {
-  // ACK is end-to-end, nothing to do in our proxy for now
+export function handleAck(request: any, _remote: RemoteInfo): void {
+  const callId = request.headers['call-id'];
+  const call = activeCalls.get(callId);
+
+  // Only forward ACK if we have a stored B-leg for this call.
+  // ACKs for non-2xx responses are handled hop-by-hop and don't need forwarding.
+  if (!call || !call.calleeContactUri) {
+    logger.debug({ callId }, 'ACK for unknown call or non-2xx — ignoring');
+    return;
+  }
+
+  // RFC 3261 §13.2.2.4: In a B2BUA the server must send its own ACK on the
+  // B-leg.  The browser ACK terminates the A-leg transaction; we originate a
+  // fresh ACK toward Zoiper to terminate the B-leg transaction.
+  const ackToCallee: any = {
+    method: 'ACK',
+    uri: call.calleeContactUri,
+    headers: {
+      to: {
+        uri: call.calleeContactUri,
+        params: { tag: call.calleeTag },
+      },
+      from:           call.callerFromHeader,
+      'call-id':      callId,
+      cseq:           { method: 'ACK', seq: call.outboundCseqSeq },
+      'max-forwards': 70,
+    },
+    content: '',
+  };
+
+  sip.send(ackToCallee);
+  logger.debug({ callId, callee: call.callee, uri: call.calleeContactUri }, 'ACK forwarded to callee');
 }
 
 export function getActiveCalls(): ActiveCall[] {

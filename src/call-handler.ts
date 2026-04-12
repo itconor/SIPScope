@@ -120,8 +120,11 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
   const mode = detectBridgeMode(sdp, callee.username);
   logger.info({ callId, mode, caller: callerUser, callee: callee.username }, 'Using bridge mode');
 
+  logger.info({ callId, sdp }, 'Offer SDP from browser (before rtpengine)');
+
   rtpengine.offer(callId, fromTag, sdp, mode)
     .then((rewrittenSdp) => {
+      logger.info({ callId, sdp: rewrittenSdp }, 'Offer SDP to callee (after rtpengine)');
       // Build outbound INVITE to callee
       const outboundRequest: any = {
         method: 'INVITE',
@@ -166,9 +169,12 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
             return;
           }
 
+          logger.info({ callId, sdp: answerSdp }, 'Answer SDP from callee (before rtpengine)');
+
           // Process answer SDP through rtpengine
           rtpengine.answer(callId, fromTag, toTag, answerSdp, mode)
             .then((rewrittenAnswerSdp) => {
+              logger.info({ callId, sdp: rewrittenAnswerSdp }, 'Answer SDP to browser (after rtpengine)');
               // Extract callee's Contact URI from 200 OK for ACK forwarding.
               // RFC 3261 §13.2.2.4: ACK Request-URI is the Contact from 200 OK.
               const calleeContact = (response.headers.contact?.[0]?.uri

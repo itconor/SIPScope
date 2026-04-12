@@ -96,15 +96,20 @@ export async function answer(
 
   if (mode === 'webrtc-to-sip') {
     // B-leg answer is from Zoiper (plain RTP/AVP).
-    // rtpengine bridges it back to the WebRTC browser.
+    // The SDP produced by rtpengine here goes back to the WebRTC browser as
+    // the 200 OK answer.  It must be WebRTC-compatible (DTLS fingerprint, ICE
+    // candidates for rtpengine's relay port).  Do NOT strip ICE or change the
+    // transport — rtpengine uses the context from the offer phase (where we
+    // said DTLS:passive) to automatically produce the correct WebRTC answer.
     flags = {
       'call-id':  callId,
       'from-tag': fromTag,
       'to-tag':   toTag,
       sdp,
       replace:    ['origin', 'session-connection'],
-      ICE:        'remove',
       DTLS:       'passive',
+      // Let rtpengine generate ICE candidates in the answer for the browser
+      ICE:        'force',
     };
   } else if (mode === 'webrtc-to-webrtc') {
     flags = {

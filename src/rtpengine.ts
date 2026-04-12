@@ -113,8 +113,12 @@ export async function answer(
       'to-tag':             toTag,
       sdp,
       replace:              ['origin', 'session-connection'],
+      // ICE:'lite' makes rtpengine an ICE-lite endpoint — it responds to the
+      // browser's STUN binding requests so ICE connectivity actually completes.
+      // ICE:'force' only adds candidates to the SDP without handling STUN,
+      // so the browser's ICE stays in "checking" and DTLS never starts.
+      ICE:                  'lite',
       DTLS:                 'passive',
-      ICE:                  'force',
       'transport protocol': 'UDP/TLS/RTP/SAVPF',
       'rtcp-mux':           ['require'],
       SDES:                 ['off'],

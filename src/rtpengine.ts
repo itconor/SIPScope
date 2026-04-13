@@ -24,8 +24,13 @@ const client = new Client({
  *                      two DTLS-SRTP legs.
  *
  *   sip-to-sip     — both sides are plain SIP; standard relay.
+ *
+ *   sip-to-webrtc  — caller is a traditional SIP phone (plain RTP);
+ *                    callee is a WebRTC client (DTLS-SRTP + ICE).
+ *                    rtpengine adds ICE/DTLS to the offer for the WebRTC
+ *                    callee, and strips it from the answer back to the caller.
  */
-export type BridgeMode = 'webrtc-to-sip' | 'webrtc-to-webrtc' | 'sip-to-sip';
+export type BridgeMode = 'webrtc-to-sip' | 'webrtc-to-webrtc' | 'sip-to-sip' | 'sip-to-webrtc';
 
 export async function offer(
   callId: string,
@@ -57,6 +62,18 @@ export async function offer(
       replace:    ['origin', 'session-connection'],
       ICE:        'force',
       DTLS:       'passive',
+    };
+  } else if (mode === 'sip-to-webrtc') {
+    // A-leg offer: plain SIP/RTP caller → add ICE + DTLS so WebRTC callee can answer
+    flags = {
+      'call-id':            callId,
+      'from-tag':           fromTag,
+      sdp,
+      replace:              ['origin', 'session-connection'],
+      ICE:                  'force',
+      'transport protocol': 'UDP/TLS/RTP/SAVPF',
+      'rtcp-mux':           ['require'],
+      DTLS:                 'passive',
     };
   } else {
     // Plain SIP ↔ plain SIP
@@ -118,6 +135,18 @@ export async function answer(
       replace:    ['origin', 'session-connection'],
       ICE:        'force',
       DTLS:       'passive',
+    };
+  } else if (mode === 'sip-to-webrtc') {
+    // B-leg answer: WebRTC callee answered → strip ICE/DTLS → plain RTP for SIP caller
+    flags = {
+      'call-id':            callId,
+      'from-tag':           fromTag,
+      'to-tag':             toTag,
+      sdp,
+      replace:              ['origin', 'session-connection'],
+      ICE:                  'remove',
+      'transport protocol': 'RTP/AVP',
+      'rtcp-mux':           ['demux'],
     };
   } else {
     flags = {

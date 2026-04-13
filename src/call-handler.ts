@@ -16,7 +16,7 @@ function extractTag(header: any): string {
   return header?.params?.tag || '';
 }
 
-function resolveCallee(uri: any): { username: string; host: string; port: number } | null {
+function resolveCallee(uri: any): { username: string; host: string; port: number; protocol: string } | null {
   // request.uri can be a parsed object or a string depending on the SIP library
   const parsed = typeof uri === 'string' ? sip.parseUri(uri) : uri;
   const username = parsed?.user;
@@ -39,6 +39,7 @@ function resolveCallee(uri: any): { username: string; host: string; port: number
       username,
       host: regByAor.receivedHost,
       port: regByAor.receivedPort,
+      protocol: regByAor.receivedProtocol || 'UDP',
     };
   }
 
@@ -46,6 +47,7 @@ function resolveCallee(uri: any): { username: string; host: string; port: number
     username,
     host: reg.receivedHost,
     port: reg.receivedPort,
+    protocol: reg.receivedProtocol || 'UDP',
   };
 }
 
@@ -70,6 +72,7 @@ function isWebRtcRegistration(reg: Registration): boolean {
  * - webrtc-to-sip:    IP Link (browser) → Zoiper / hardware phone
  * - webrtc-to-webrtc: IP Link → IP Link (both WebRTC)
  * - sip-to-sip:       traditional phone → traditional phone
+ * - sip-to-webrtc:    traditional phone / Linphone → IP Link (WebSocket callee)
  */
 function detectBridgeMode(offerSdp: string, calleeUsername: string): BridgeMode {
   const callerIsWebRtc = isWebRtcSdp(offerSdp);
@@ -81,8 +84,9 @@ function detectBridgeMode(offerSdp: string, calleeUsername: string): BridgeMode 
 
   logger.debug({ calleeUsername, callerIsWebRtc, calleeIsWebRtc }, 'Bridge mode detection');
 
-  if (callerIsWebRtc && !calleeIsWebRtc) return 'webrtc-to-sip';
-  if (callerIsWebRtc && calleeIsWebRtc)  return 'webrtc-to-webrtc';
+  if (!callerIsWebRtc && calleeIsWebRtc)  return 'sip-to-webrtc';
+  if (callerIsWebRtc && !calleeIsWebRtc)  return 'webrtc-to-sip';
+  if (callerIsWebRtc && calleeIsWebRtc)   return 'webrtc-to-webrtc';
   return 'sip-to-sip';
 }
 
@@ -125,10 +129,15 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
   rtpengine.offer(callId, fromTag, sdp, mode)
     .then((rewrittenSdp) => {
       logger.info({ callId, sdp: rewrittenSdp }, 'Offer SDP to callee (after rtpengine)');
-      // Build outbound INVITE to callee
+      // Build outbound INVITE to callee — include transport param so the SIP
+      // library routes via the correct flow (WebSocket vs UDP/TCP).
+      const calleeTransport = callee.protocol.toLowerCase();
+      const calleeUri = (calleeTransport === 'ws' || calleeTransport === 'wss')
+        ? `sip:${callee.username}@${callee.host}:${callee.port};transport=${calleeTransport}`
+        : `sip:${callee.username}@${callee.host}:${callee.port}`;
       const outboundRequest: any = {
         method: 'INVITE',
-        uri: `sip:${callee.username}@${callee.host}:${callee.port}`,
+        uri: calleeUri,
         headers: {
           to: { uri: `sip:${callee.username}@${config.domain}` },
           from: request.headers.from,

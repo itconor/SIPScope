@@ -17,7 +17,7 @@ services:
     command: >
       rtpengine
       --table=-1
-      --interface=${PUBLIC_IP:-0.0.0.0}
+      --interface=${LOCAL_IP:-0.0.0.0}!${PUBLIC_IP:-0.0.0.0}
       --listen-ng=127.0.0.1:22222
       --port-min=20000
       --port-max=30000

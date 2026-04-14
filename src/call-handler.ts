@@ -128,6 +128,16 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
 
   rtpengine.offer(callId, fromTag, sdp, mode)
     .then((rewrittenSdp) => {
+      // For sip-to-webrtc: inject a=ice-lite before the first m= line.
+      // rtpengine is an ICE-lite agent — it only responds to STUN checks,
+      // never initiates them. Without a=ice-lite in the offer, aiortc (full ICE)
+      // waits for STUN checks from rtpengine that never arrive, keeping ICE
+      // stuck at "connecting". a=ice-lite tells aiortc to be the controlling
+      // agent and use-candidate immediately after its own checks succeed.
+      if (mode === 'sip-to-webrtc') {
+        rewrittenSdp = rewrittenSdp.replace(/^(m=)/m, 'a=ice-lite\r\n$1');
+        logger.debug({ callId }, 'Injected a=ice-lite into offer SDP for sip-to-webrtc');
+      }
       logger.info({ callId, sdp: rewrittenSdp }, 'Offer SDP to callee (after rtpengine)');
       // Build outbound INVITE to callee — include transport param so the SIP
       // library routes via the correct flow (WebSocket vs UDP/TCP).

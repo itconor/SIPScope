@@ -756,35 +756,61 @@ function makeWsTransport(options, callback) {
   }
 
   function get(flow) {
-    var key = [flow.address, flow.port, flow.local.address, flow.local.port].join();
-    console.log('[WS] get() looking for flow:', key);
-    var ws = flows[key];
-    if(!ws) {
-      // Try with normalized addresses as fallback
-      var normKey = [normalizeAddr(flow.address), flow.port, normalizeAddr(flow.local.address), flow.local.port].join();
-      if(normKey !== key) {
-        console.log('[WS] get() retrying with normalized key:', normKey);
-        ws = flows[normKey];
+    var addr = flow.address || flow.host;
+    if(flow.local) {
+      // Full 4-tuple lookup — used when responding to an inbound message
+      var key = [addr, flow.port, flow.local.address, flow.local.port].join();
+      console.log('[WS] get() looking for flow:', key);
+      var ws = flows[key];
+      if(!ws) {
+        var normKey = [normalizeAddr(addr), flow.port, normalizeAddr(flow.local.address), flow.local.port].join();
+        if(normKey !== key) {
+          console.log('[WS] get() retrying with normalized key:', normKey);
+          ws = flows[normKey];
+        }
       }
-    }
-    if(ws) {
-      console.log('[WS] get() found flow, returning transport');
-      return {
-        send: function(m) { console.log('[WS] Sending response via WS'); ws.send(stringify(m)); },
-        release: function() {},
-        protocol: 'WS'
-      };
+      if(ws) {
+        console.log('[WS] get() found flow, returning transport');
+        return {
+          send: function(m) { console.log('[WS] Sending response via WS'); ws.send(stringify(m)); },
+          release: function() {},
+          protocol: 'WS'
+        };
+      }
+      console.log("[WS] FAILED to get ws for target. Key was:", key);
+      console.log("[WS] Available flows:", Object.keys(flows));
+      return null;
     } else {
-        console.log("[WS] FAILED to get ws for target. Key was:", key);
-        console.log("[WS] Available flows:", Object.keys(flows));
+      // Partial lookup by remote address:port only — used when routing an outbound
+      // request to a registered WS client (we don't know which local port to use).
+      var normAddr = normalizeAddr(addr);
+      var port = String(flow.port);
+      console.log('[WS] get() partial lookup for remote:', normAddr + ':' + port);
+      for(var k in flows) {
+        var parts = k.split(',');
+        if(normalizeAddr(parts[0]) === normAddr && parts[1] === port) {
+          console.log('[WS] get() found flow by remote addr:port:', k);
+          var ws = flows[k];
+          return {
+            send: function(m) { console.log('[WS] Sending INVITE via WS to registered client'); ws.send(stringify(m)); },
+            release: function() {},
+            protocol: 'WS'
+          };
+        }
+      }
+      console.log('[WS] FAILED partial lookup for remote:', normAddr + ':' + port);
+      console.log('[WS] Available flows:', Object.keys(flows));
+      return null;
     }
   }
 
   function open(target, onError) {
-    if(target.local)
-      return get(target); 
-    else
-      return makeClient('ws://'+target.host+':'+target.port)(onError);
+    // Always try to reuse an existing registered WS flow first
+    var existing = get(target);
+    if(existing) return existing;
+    // Fall back: open a new outbound WS connection (server-to-server or client mode)
+    var host = target.host || target.address;
+    return makeClient('ws://'+host+':'+target.port)(onError);
   }
 
   return {
@@ -921,8 +947,8 @@ var resolve4 = makeWellBehavingResolver(dns.resolve4);
 var resolve6 = makeWellBehavingResolver(dns.resolve6);
 
 function resolve(uri, action) {
-  if(uri.params.transport === 'ws')
-    return action([{protocol: uri.schema === 'sips' ? 'WSS' : 'WS', host: uri.host, port: uri.port || (uri.schema === 'sips' ? 433 : 80)}]);
+  if(uri.params.transport === 'ws' || uri.params.transport === 'wss')
+    return action([{protocol: uri.params.transport === 'wss' || uri.schema === 'sips' ? 'WSS' : 'WS', address: uri.host, host: uri.host, port: uri.port || (uri.schema === 'sips' ? 443 : 80)}]);
 
   if(net.isIP(uri.host)) {
     var protocol = uri.params.transport || 'UDP';

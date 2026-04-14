@@ -198,10 +198,18 @@ export function handleInvite(request: any, remote: RemoteInfo): void {
                 logger.debug({ callId }, 'Injected a=ice-lite into answer SDP for webrtc-to-sip');
               }
 
-              // Extract callee's Contact URI from 200 OK for ACK forwarding.
+              // Extract callee's Contact URI for ACK forwarding.
               // RFC 3261 §13.2.2.4: ACK Request-URI is the Contact from 200 OK.
-              const calleeContact = (response.headers.contact?.[0]?.uri
-                || `sip:${callee.username}@${callee.host}:${callee.port}`);
+              // For WebSocket callees the Contact URI contains the SIP server hostname
+              // (not the callee's real IP:port), so the WS flow lookup fails.
+              // Always use the registration host:port with transport=ws for WS callees
+              // so the ACK is routed via the correct existing WebSocket flow.
+              const calleeTransport = callee.protocol.toLowerCase();
+              const isWsCallee = calleeTransport === 'ws' || calleeTransport === 'wss';
+              const calleeContact = isWsCallee
+                ? `sip:${callee.username}@${callee.host}:${callee.port};transport=${calleeTransport}`
+                : (response.headers.contact?.[0]?.uri
+                    || `sip:${callee.username}@${callee.host}:${callee.port}`);
 
               // Store active call
               activeCalls.set(callId, {

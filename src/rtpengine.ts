@@ -25,10 +25,11 @@ const client = new Client({
  *
  *   sip-to-sip     — both sides are plain SIP; standard relay.
  *
- *   sip-to-webrtc  — caller is a traditional SIP phone (plain RTP);
- *                    callee is a WebRTC client (DTLS-SRTP + ICE).
- *                    rtpengine adds ICE/DTLS to the offer for the WebRTC
- *                    callee, and strips it from the answer back to the caller.
+ *   sip-to-webrtc  — caller is a traditional SIP phone; callee is a
+ *                    WebSocket-registered SIP client (SignalScope IP Link).
+ *                    Both legs use plain RTP — SignalScope handles the
+ *                    audio bridge via ffmpeg without ICE/DTLS. rtpengine
+ *                    relays plain RTP in both directions.
  */
 export type BridgeMode = 'webrtc-to-sip' | 'webrtc-to-webrtc' | 'sip-to-sip' | 'sip-to-webrtc';
 
@@ -64,16 +65,15 @@ export async function offer(
       DTLS:       'passive',
     };
   } else if (mode === 'sip-to-webrtc') {
-    // A-leg offer: plain SIP/RTP caller → add ICE + DTLS so WebRTC callee can answer
+    // Both legs plain RTP — SignalScope bridges via ffmpeg (no ICE/DTLS needed).
+    // Using the same flags as sip-to-sip: rtpengine just relays plain RTP.
     flags = {
-      'call-id':            callId,
-      'from-tag':           fromTag,
+      'call-id':  callId,
+      'from-tag': fromTag,
       sdp,
-      replace:              ['origin', 'session-connection'],
-      ICE:                  'force',
-      'transport protocol': 'UDP/TLS/RTP/SAVPF',
-      'rtcp-mux':           ['require'],
-      DTLS:                 'passive',
+      replace:    ['origin', 'session-connection'],
+      ICE:        'remove',
+      'rtcp-mux': ['offer'],
     };
   } else {
     // Plain SIP ↔ plain SIP
@@ -137,16 +137,15 @@ export async function answer(
       DTLS:       'passive',
     };
   } else if (mode === 'sip-to-webrtc') {
-    // B-leg answer: WebRTC callee answered → strip ICE/DTLS → plain RTP for SIP caller
+    // B-leg answer: SignalScope answered with plain RTP → relay back to SIP caller.
     flags = {
-      'call-id':            callId,
-      'from-tag':           fromTag,
-      'to-tag':             toTag,
+      'call-id':  callId,
+      'from-tag': fromTag,
+      'to-tag':   toTag,
       sdp,
-      replace:              ['origin', 'session-connection'],
-      ICE:                  'remove',
-      'transport protocol': 'RTP/AVP',
-      'rtcp-mux':           ['demux'],
+      replace:    ['origin', 'session-connection'],
+      ICE:        'remove',
+      'rtcp-mux': ['offer'],
     };
   } else {
     flags = {

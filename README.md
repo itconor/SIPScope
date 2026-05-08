@@ -39,7 +39,7 @@ The installer handles everything: Docker, firewall, Let's Encrypt SSL, SIP accou
 
 ## Web Admin UI
 
-Access the admin dashboard at `http://your-server:8080` after installation.
+Access the admin dashboard at `http://your-server:3000` after installation.
 
 - **Dashboard** — live view of registered devices (online/offline, IP, user-agent) and active calls with duration
 - **Accounts** — add, edit, and delete SIP accounts from the browser
@@ -90,7 +90,7 @@ Open these ports on your server:
 | 5060 | UDP/TCP | SIP signaling |
 | 5061 | TCP | SIP over TLS |
 | 8089 | TCP | SIP over WebSocket (WSS) |
-| 8080 | TCP | Web admin UI |
+| 3000 | TCP | Web admin UI |
 | 20000-30000 | UDP | RTP media |
 
 ## Device Configuration
@@ -111,7 +111,7 @@ Point your broadcast equipment to SIPScope:
 
 ### Via Web UI
 
-Open `http://your-server:8080`, log in, and go to the Accounts page.
+Open `http://your-server:3000`, log in, and go to the Accounts page.
 
 ### Via CLI
 
